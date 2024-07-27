@@ -36,15 +36,79 @@ int is_ambiguous(const char *expanded_value)
     return (strchr(expanded_value, ' ') != NULL || expanded_value[0] == '\0' || !expanded_value);
 }
 
+
+char *alloc_token(const char *s, int *r, int i) {
+    int size;
+    int j;
+    int rem;
+    j = 0;
+    size = 0;
+    rem = i;
+
+    while (s[i] && s[i] != 32 && !(s[i] >= 9 && s[i] <= 13)) {
+        size++;
+        i++;
+    }
+
+    char *buf = malloc(size + 1);
+    if (!buf)
+        return NULL;
+
+    while (j < size) {
+        buf[j] = s[rem];
+        j++;
+        rem++;
+    }
+    buf[j] = '\0';
+    *r = rem;
+    return buf;
+}
+
+void ft_buffer_split(Token *tokens, int *nb, const char *str) {
+    int i;
+    int j;
+    char *token_value;
+     i = 0;
+     j = 0;
+    while (str[i]) {
+        if (!ft_isspace((unsigned char)str[i])) {
+            token_value = alloc_token(str, &j, i);
+            if (token_value) {
+                add_token(tokens, nb, TOKEN_WORD, token_value);
+            }
+            i = j;
+        } else 
+        {
+            i++;
+        }
+    }
+}
+
+int check_space(char *s)
+{
+    int i;
+    i = 0;
+    while(s[i])
+    {
+        if(s[i] == 32 || (s[i] >= 9 && s[i] <= 13))
+            return 1;
+        i++;
+    }
+    return 0;
+}
 void handle_quotes_and_words(const char **p, Token *tokens, int *num_tokens, QuoteWordParserState *state) 
 {
     char *expanded_value;
     const char *start;
     int pid;
     int flag;
+    int flag2;
+    int fl;
     int i;
     char *pid_str;
     flag = 0;
+    fl = 0;
+    flag2 = 0;
     state->buffer_index = 0;
     while (**p != '\0' && (state->in_quotes || (!ft_isspace(**p) && **p != '|' 
     && **p != '<' && **p != '>' && **p != '&' && **p != '(' && **p != ')')))
@@ -59,6 +123,9 @@ void handle_quotes_and_words(const char **p, Token *tokens, int *num_tokens, Quo
         {
             if(**p == '\'')
                 state->status = false;
+            if(**p == '"')
+                fl = 1;
+
            handle_quotes_and_wordsv2(p,&state);
             (*p)++;
         }
@@ -69,7 +136,7 @@ void handle_quotes_and_words(const char **p, Token *tokens, int *num_tokens, Quo
             start = *p;
             if (start[0] == '$') 
             {
-                pid = getpid();
+                pid = g_data.pid;
                 pid_str = ft_itoa(pid);
                 //add_token(tokens, num_tokens, TOKEN_WORD, pid_str);
                 while(pid_str[i])
@@ -87,6 +154,7 @@ void handle_quotes_and_words(const char **p, Token *tokens, int *num_tokens, Quo
                 expanded_value = NULL;
                 g_data.exit_status = 0;
                 (*p)++;
+                flag2 = 1;
             }
             while (ft_isalnum(**p) || **p == '_') (*p)++;
             if (*p > start) 
@@ -100,11 +168,20 @@ void handle_quotes_and_words(const char **p, Token *tokens, int *num_tokens, Quo
                          add_token(tokens, num_tokens , TOKEN_AMBIGUOUS, "?");
                         printf("minishell: ambiguous redirect\n");
                 }
-                else
+                else if(flag2 == 0)
+                {
+                if(fl||check_space(expanded_value) == 0)
                 {
                 while(expanded_value[i] && start[0] != '?')
-                state->buffer[state->buffer_index++] = expanded_value[i++];
+                    state->buffer[state->buffer_index++] = expanded_value[i++];
                 free(expanded_value);
+                }
+                else if(fl == 0)
+                {
+                ft_buffer_split(tokens,num_tokens,expanded_value);
+                free(expanded_value);
+                return;
+                }
                 }
             }
             else
@@ -116,7 +193,7 @@ void handle_quotes_and_words(const char **p, Token *tokens, int *num_tokens, Quo
     state->buffer[state->buffer_index] = '\0';
      
     if (state->buffer_index > 0 && flag == 0) // Only add token if buffer is not empty
-        add_token(tokens, num_tokens, TOKEN_WORD, state->buffer);
+       add_token(tokens, num_tokens, TOKEN_WORD, state->buffer);
 }
 
 

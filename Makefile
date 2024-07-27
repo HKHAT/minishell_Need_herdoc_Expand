@@ -2,7 +2,7 @@ NAME = minishell
 
 #NAME_BONUS = pipex_bonus
 
-CFLAGS = -Wall -Wextra -Werror #-g3 -fsanitize=address #-Wall -Wextra -Werror
+CFLAGS = -Wall -Wextra -Werror -g3 -fsanitize=address #-Wall -Wextra -Werror
 LDFLAGS = -lreadline
 
 CC = cc 
